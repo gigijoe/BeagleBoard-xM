@@ -24,7 +24,7 @@
 #include <linux/irq.h>
 #include <linux/input.h>
 #include <linux/gpio_keys.h>
-#include <linux/spi/spi.h>
+#include <linux/usb/android_composite.h>
 
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/partitions.h>
@@ -48,7 +48,6 @@
 #include <plat/timer-gp.h>
 #include <plat/clock.h>
 #include <plat/omap-pm.h>
-#include <plat/mcspi.h>
 
 #include "mux.h"
 #include "mmc-twl4030.h"
@@ -93,6 +92,61 @@ extern struct mt9p031_platform_data mt9p031_pdata;
 #define GPMC_CS_SIZE   0x30
 
 #define NAND_BLOCK_SIZE		SZ_128K
+
+extern struct regulator_consumer_supply twl4030_vmmc1_supply;
+extern struct regulator_consumer_supply twl4030_vsim_supply;
+
+extern struct regulator_init_data vmmc1_data;
+extern struct regulator_init_data vsim_data;
+
+#ifdef CONFIG_USB_ANDROID
+
+#define GOOGLE_VENDOR_ID		0x18d1
+#define GOOGLE_PRODUCT_ID		0x9018
+#define GOOGLE_ADB_PRODUCT_ID	0x9015
+
+static char *usb_functions_adb[] = {
+	"adb",
+};
+
+static char *usb_functions_all[] = {
+	"adb",
+};
+
+static struct android_usb_product usb_products[] = {
+	{
+		.product_id	= GOOGLE_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_adb),
+		.functions	= usb_functions_adb,
+	},
+};
+
+static struct android_usb_platform_data android_usb_pdata = {
+	.vendor_id	= GOOGLE_VENDOR_ID,
+	.product_id	= GOOGLE_PRODUCT_ID,
+	.functions	= usb_functions_all,
+	.products	= usb_products,
+	.version	= 0x0100,
+	.product_name	= "rowboat gadget",
+	.manufacturer_name	= "rowboat",
+	.serial_number	= "20100720",
+	.num_functions	= ARRAY_SIZE(usb_functions_all),
+};
+
+static struct platform_device androidusb_device = {
+	.name	= "android_usb",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &android_usb_pdata,
+	},
+};
+
+static void omap3evm_android_gadget_init(void)
+{
+	platform_device_register(&androidusb_device);
+}
+
+#endif
 
 char expansionboard_name[16];
 
@@ -254,6 +308,7 @@ static struct omap_dss_device beagle_dvi_device = {
 	.name = "dvi",
 	.driver_name = "generic_panel",
 	.phy.dpi.data_lines = 24,
+	.reset_gpio = 170,
 	.platform_enable = beagle_enable_dvi,
 	.platform_disable = beagle_disable_dvi,
 };
@@ -337,7 +392,7 @@ static struct twl4030_hsmmc_info mmc[] = {
 	{
 		.mmc		= 1,
 		.wires		= 8,
-		.gpio_wp	= 29,
+		.gpio_wp	= -1,
 	},
 	{
 		.mmc		= 2,
@@ -362,9 +417,15 @@ static int beagle_twl_gpio_setup(struct device *dev,
 		unsigned gpio, unsigned ngpio)
 {
 	if (system_rev >= 0x20 && system_rev <= 0x34301000) {
-		omap_mux_init_gpio(23, OMAP_PIN_INPUT);
-		mmc[0].gpio_wp = 23;
+		if (cpu_is_omap3630()) {
+			mmc[0].gpio_wp = -1;
+		}
+		else {
+			mmc[0].gpio_wp = 23;
+			omap_mux_init_gpio(23, OMAP_PIN_INPUT);
+		}
 	} else {
+		mmc[0].gpio_wp = 29;
 		omap_mux_init_gpio(29, OMAP_PIN_INPUT);
 	}
 	/* gpio + 0 is "mmc0_cd" (input/IRQ) */
@@ -380,11 +441,8 @@ static int beagle_twl_gpio_setup(struct device *dev,
 	 */
 
 	if (cpu_is_omap3630()) {
-		/* DVI reset GPIO is different between revisions */	
-		beagle_dvi_device.reset_gpio = 129;
-
-		/* Power on DVI, Serial and PWR led */ 
- 		gpio_request(gpio + 1, "nDVI_PWR_EN");
+		/* Power on DVI, Serial and PWR led */
+		gpio_request(gpio + 1, "nDVI_PWR_EN");
 		gpio_direction_output(gpio + 1, 0);
 
 		/* Power on camera interface */
@@ -396,9 +454,6 @@ static int beagle_twl_gpio_setup(struct device *dev,
 		gpio_direction_output(gpio + TWL4030_GPIO_MAX, 1);
 	}
 	else {
-		/* DVI reset GPIO is different between revisions */ 
-		beagle_dvi_device.reset_gpio = 170;
-				
 		gpio_request(gpio + 1, "EHCI_nOC");
 		gpio_direction_input(gpio + 1);
 
@@ -619,14 +674,14 @@ static struct i2c_board_info __initdata beagle_i2c2_boardinfo[] = {
 		.platform_data	= &mt9t112_pdata,
 	},
 #endif
-#if defined(CONFIG_VIDEO_MT9P031) || defined(CONFIG_VIDEO_MT9P031_MODULE)		
+#if defined(CONFIG_VIDEO_MT9P031) || defined(CONFIG_VIDEO_MT9P031_MODULE)
 	{
 		I2C_BOARD_INFO("mt9p031", MT9P031_I2C_ADDR),
 		.platform_data	= &mt9p031_pdata,
 	},
 #endif
-
 };
+
 
 static int __init omap3_beagle_i2c_init(void)
 {
@@ -637,10 +692,11 @@ static int __init omap3_beagle_i2c_init(void)
 		printk(KERN_INFO "Beagle expansionboard: registering i2c2 bus for zippy/zippy2\n");
 		omap_register_i2c_bus(2, 400,  beagle_zippy_i2c2_boardinfo,
 				ARRAY_SIZE(beagle_zippy_i2c2_boardinfo));
-	} else
-	{
+	} else if (cpu_is_omap3630()) {
 		omap_register_i2c_bus(2, 400,  beagle_i2c2_boardinfo,
 				ARRAY_SIZE(beagle_i2c2_boardinfo));
+	} else {
+		omap_register_i2c_bus(2, 100, NULL, 0);
 	}
 	/* Bus 3 is attached to the DVI port where devices like the pico DLP
 	 * projector don't work reliably with 400kHz */
@@ -701,30 +757,12 @@ static struct platform_device keys_gpio = {
 	},
 };
 
-static struct spi_board_info beaglefpga_mcspi_board_info[] = {
-	// spi 4.0
-	{
-		.modalias	= "spidev",
-		.max_speed_hz	= 48000000, //48 Mbps
-		.bus_num	= 4,
-		.chip_select	= 0,
-		.mode = SPI_MODE_1,
-	},
-};
-
-static void __init beaglefpga_init_spi(void)
-{
-	/* hook the spi ports to the spidev driver */
-	spi_register_board_info(beaglefpga_mcspi_board_info,
-		ARRAY_SIZE(beaglefpga_mcspi_board_info));
-}
-
 static void __init omap3_beagle_init_irq(void)
 {
         if (cpu_is_omap3630())
         {
                 omap2_init_common_hw(mt46h32m32lf6_sdrc_params,
-                                        mt46h32m32lf6_sdrc_params,
+                                        NULL,
                                         _omap37x_mpu_rate_table,
                                         _omap37x_dsp_rate_table,
                                         _omap37x_l3_rate_table);
@@ -732,7 +770,7 @@ static void __init omap3_beagle_init_irq(void)
         else
         {
                 omap2_init_common_hw(mt46h32m32lf6_sdrc_params,
-                                        mt46h32m32lf6_sdrc_params,
+                                        NULL,
                                         _omap35x_mpu_rate_table,
                                         _omap35x_dsp_rate_table,
                                         _omap35x_l3_rate_table);
@@ -822,6 +860,9 @@ static struct omap_board_mux board_mux[] __initdata = {
 	OMAP3_MUX(CAM_HS, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
 	OMAP3_MUX(CAM_VS, OMAP_MUX_MODE0 | OMAP_PIN_INPUT),
 
+	/* I2C 2 : Mux enabling */
+	OMAP3_MUX(I2C2_SDA, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
+	OMAP3_MUX(I2C2_SCL, OMAP_MUX_MODE0 | OMAP_PIN_INPUT_PULLUP),
 	/* Camera - Reset GPIO 98 */
 	OMAP3_MUX(CAM_FLD, OMAP_MUX_MODE4 | OMAP_PIN_OUTPUT),
 
@@ -847,14 +888,14 @@ static void __init omap3_beagle_init(void)
 {
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	omap3_beagle_i2c_init();
-
-	if (cpu_is_omap3630()) {
-		gpio_buttons[0].gpio = 4;
-	}
-
 	platform_add_devices(omap3_beagle_devices,
 			ARRAY_SIZE(omap3_beagle_devices));
 	omap_serial_init();
+
+	omap_mux_init_gpio(170, OMAP_PIN_INPUT);
+	gpio_request(170, "DVI_nPD");
+	/* REVISIT leave DVI powered down until it's needed ... */
+	gpio_direction_output(170, true);
 
 	if(!strcmp(expansionboard_name, "zippy"))
 	{
@@ -905,12 +946,6 @@ static void __init omap3_beagle_init(void)
 		gpio_export(162, 1);
 	}
 
-	if(!strcmp(expansionboard_name, "beaglefpga"))
-	{
-		printk(KERN_INFO "Beagle expansionboard: Using McSPI for SPI\n");
-		beaglefpga_init_spi();
-	}
-
 	usb_musb_init();
 	usb_ehci_init(&ehci_pdata);
 	omap3beagle_flash_init();
@@ -920,6 +955,11 @@ static void __init omap3_beagle_init(void)
 	omap_mux_init_signal("sdrc_cke1", OMAP_PIN_OUTPUT);
 
 	beagle_display_init();
+
+#ifdef CONFIG_USB_ANDROID
+	omap3evm_android_gadget_init();
+#endif
+
 }
 static void __init omap3_beagle_map_io(void)
 {
