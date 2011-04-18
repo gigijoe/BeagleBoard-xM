@@ -480,7 +480,7 @@ static int mt9p031_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 	switch (power) {
 	case V4L2_POWER_OFF:
 		DPRINTK_CAM_BOARD("-->board-omap3beagle-camera.c::mt9p031_power_set()-->V4L2_POWER_OFF got called\n");
-		break;
+		
 	case V4L2_POWER_STANDBY:
 		DPRINTK_CAM_BOARD("-->board-omap3beagle-camera.c::mt9p031_power_set()-->V4L2_POWER_STANDBY got called\n");
 		isp_set_xclk(vdev->cam->isp, 0, CAM_USE_XCLKA);
