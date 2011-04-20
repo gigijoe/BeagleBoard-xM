@@ -543,6 +543,7 @@ static int mt9p031_init_camera(const struct i2c_client *client)
 	ret |= mt9p031_reg_write(client, REG_MT9P031_BLUE_GAIN, 0x0051);  	//Blue_gain_reg
 	ret |= mt9p031_reg_write(client, REG_MT9P031_RED_GAIN, 0x0051);  	//Red_gain_reg
 	ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_2_GAIN, 0x0051);  	//Green2_gain_reg
+	ret |= mt9p031_reg_write(client, REG_MT9P031_GLOBAL_GAIN, 0x0008);		//Analog Gain
 	ret |= mt9p031_reg_write(client, REG_MT9P031_READ_MODE1, 0x0006);  	//Read_mode_1 //disable AB
 	ret |= mt9p031_reg_write(client, REG_MT9P031_OUT_CTRL, 0x1F8E);		//Enable parll fifo data
 	
@@ -1171,7 +1172,7 @@ static ssize_t
 mt9p031_basic_reg_addr_store( struct device *dev, struct device_attribute *attr, const char *buf, size_t n)
 {
 	u16 val;
-	sscanf(buf, "%x",(unsigned int *) &val);
+	sscanf(buf, "%hx", &val);
 	mt9p031_attr_basic_addr = (u16) val;
 	return n;
 }
@@ -1187,7 +1188,7 @@ mt9p031_basic_reg_val_show( struct device *dev, struct device_attribute *attr, c
 	ret = mt9p031_reg_read(sysPriv.client, mt9p031_attr_basic_addr, &val);
 	if(ret < 0){        
 		printk(KERN_INFO "mt9p031: Basic register read failed");
-		return 0; // nothing processed
+		return 1; // nothing processed
 	} else {
 		return sprintf(buf, "0x%x\n", val);
 	}
@@ -1201,7 +1202,7 @@ mt9p031_basic_reg_val_store( struct device *dev, struct device_attribute *attr, 
 
 	if (mt9p031_reg_write(sysPriv.client, mt9p031_attr_basic_addr, (u16)val)) {
 		printk(KERN_INFO "mt9p031: Basic regiser write failed");
-		return 0; // nothing processed
+		return n; // nothing processed
 	} else {
 		return n;
 	}
@@ -1281,7 +1282,7 @@ mt9p031_gain_val_store( struct device *dev, struct device_attribute *attr, const
 	struct i2c_client *client;
 	struct vcontrol *lvc;
 	
-	sscanf(buf, "%d", (int *)&val);
+	sscanf(buf, "%hd", &val);
 	client = sysPriv.client;
 		
 	lvc = &mt9p031_video_control[V4L2_CID_GAIN];	

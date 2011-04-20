@@ -58,7 +58,7 @@ Adjusting exposure time(in ms)[Range 15000-128000] using sysfs
 	for reading exposure time
 		-cat exposure_val
 		
-Adjusting Global(Analog) gain indexwise, incremental basis 0.5 [Range 0-14] using sysfs
+Adjusting Global(Analog) gain indexwise, incremental basis 0.125 [Range 0-47] using sysfs
 ---------------------------------------------------------------------------
 	for writing gain to index 4
 		-echo 4 > gain_val
