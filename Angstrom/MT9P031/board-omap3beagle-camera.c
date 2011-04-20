@@ -44,14 +44,6 @@
 
 #include "mux.h"
 
-#define DEBUG_CAM_BOARD_PRINT  1
-#ifdef  DEBUG_CAM_BOARD_PRINT
-#define DPRINTK_CAM_BOARD(format, ...)				\
-	printk(KERN_INFO "_BEAGLE_CAM: " format, ## __VA_ARGS__)
-#else
-#define DPRINTK_CAM_BOARD(format, ...)
-#endif
-
 #define CAM_USE_XCLKA		0
 
 #define LEOPARD_RESET_GPIO	98
@@ -115,7 +107,7 @@ static int mt9v113_ifparm(struct v4l2_ifparm *p)
 
 static struct omap34xxcam_hw_config mt9v113_hwc = {
 	.dev_index		= 0,
-	.dev_minor		= 0,
+	.dev_minor		= -1,
 	.dev_type		= OMAP34XXCAM_SLAVE_SENSOR,
 	.u.sensor.sensor_isp	= 1,
 	.u.sensor.capture_mem	= MT9V113_MAX_FRAME_SIZE * 2,
@@ -267,8 +259,8 @@ static int mt9t112_ifparm(struct v4l2_ifparm *p)
 
 #if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
 static struct omap34xxcam_hw_config mt9t112_hwc = {
-	.dev_index		= 0,
-	.dev_minor		= 0,
+	.dev_index		= 1,
+	.dev_minor		= -1,
 	.dev_type		= OMAP34XXCAM_SLAVE_SENSOR,
 	.u.sensor.sensor_isp	= 0,
 	.u.sensor.capture_mem	= MT9T112_BIGGEST_FRAME_BYTE_SIZE,
@@ -299,7 +291,7 @@ static int mt9t112_set_prv_data(void *priv)
 }
 
 /**
- * @brief mt9t112_power_set - Power-on or power-off TVP5146 device
+ * @brief mt9t112_power_set - Power-on or power-off MT9T112 device
  *
  * @param power - enum, Power on/off, resume/standby
  *
@@ -308,7 +300,6 @@ static int mt9t112_set_prv_data(void *priv)
 static int mt9t112_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 {
 	struct omap34xxcam_videodev *vdev = s->u.slave->master->priv;
-
 	switch (power) {
 	case V4L2_POWER_OFF:
 	case V4L2_POWER_STANDBY:
@@ -339,7 +330,7 @@ static int mt9t112_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		mdelay(50);
 
 		/* Enable EXTCLK */
-		isp_set_xclk(vdev->cam->isp, 24000000, CAM_USE_XCLKA);
+		isp_set_xclk(vdev->cam->isp, 12000000, CAM_USE_XCLKA);
 
 		/*
 		 * Wait at least 70 CLK cycles (w/EXTCLK = 24MHz):
@@ -382,7 +373,7 @@ struct mt9t112_platform_data mt9t112_pdata = {
 #define ISP_MT9P031_MCLK	216000000
 
 /* Arbitrary memory handling limit */
-#define MT9P031_BIGGEST_FRAME_BYTE_SIZE	PAGE_ALIGN((2048 * 2) * 1536 * 4)
+#define MT9P031_BIGGEST_FRAME_BYTE_SIZE	PAGE_ALIGN((2592 * 1944) * 2 * 4 )
 
 static struct isp_interface_config mt9p031_if_config = {
 	.ccdc_par_ser		= ISP_PARLL,
@@ -422,7 +413,7 @@ static struct v4l2_ifparm mt9p031_ifparm_s = {
  * @return result of operation - 0 is success
  */
 static int mt9p031_ifparm(struct v4l2_ifparm *p)
-{
+{	
 	if (p == NULL)
 		return -EINVAL;
 
@@ -456,11 +447,9 @@ static int mt9p031_set_prv_data(void *priv)
 	if (priv == NULL)
 		return -EINVAL;
 
-	DPRINTK_CAM_BOARD("===board-omap3beagle-camera.c::mt9p031_set_prv_data() got called\n");
 	*hwc = mt9p031_hwc;
 	return 0;
 #else
-	DPRINTK_CAM_BOARD("===board-omap3beagle-camera.c::mt9p031_set_prv_data() got missed\n");
 	return -EINVAL;
 #endif
 }
@@ -475,14 +464,10 @@ static int mt9p031_set_prv_data(void *priv)
 static int mt9p031_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 {	
 	struct omap34xxcam_videodev *vdev = s->u.slave->master->priv;
-	DPRINTK_CAM_BOARD("===board-omap3beagle-camera.c::mt9p031_power_set() got called\n");
-
 	switch (power) {
 	case V4L2_POWER_OFF:
-		DPRINTK_CAM_BOARD("-->board-omap3beagle-camera.c::mt9p031_power_set()-->V4L2_POWER_OFF got called\n");
-		
+		break;
 	case V4L2_POWER_STANDBY:
-		DPRINTK_CAM_BOARD("-->board-omap3beagle-camera.c::mt9p031_power_set()-->V4L2_POWER_STANDBY got called\n");
 		isp_set_xclk(vdev->cam->isp, 0, CAM_USE_XCLKA);
 
 		if (regulator_is_enabled(cam_1v8_reg))
@@ -493,7 +478,6 @@ static int mt9p031_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 
 	case V4L2_POWER_ON:
 #if defined(CONFIG_VIDEO_OMAP3) || defined(CONFIG_VIDEO_OMAP3_MODULE)
-		DPRINTK_CAM_BOARD("-->board-omap3beagle-camera.c::mt9p031_power_set()-->V4L2_POWER_ON got called\n");
 		isp_configure_interface(vdev->cam->isp, &mt9p031_if_config);
 #endif
 
@@ -533,18 +517,15 @@ static int mt9p031_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 		break;
 
 	default:
-		printk(KERN_INFO "===board-omap3beagle-camera.c::mt9p031_power_set() failed\n");
 		return -ENODEV;
 		break;
 	}
-	DPRINTK_CAM_BOARD("===board-omap3beagle-camera.c::mt9p031_power_set() completed\n");
 	return 0;
 }
 
 static u32 mt9p031_set_xclk(struct v4l2_int_device *s, u32 xclkfreq)
-{
+{	
     struct omap34xxcam_videodev *vdev = s->u.slave->master->priv;
-	DPRINTK_CAM_BOARD("===board-omap3beagle-camera.c::mt9p031_set_xclk() got called\n");
     return isp_set_xclk(vdev->cam->isp, xclkfreq, 0);
 }
 
@@ -561,8 +542,6 @@ struct mt9p031_platform_data mt9p031_pdata = {
 
 static int beagle_cam_probe(struct platform_device *pdev)
 {
-	DPRINTK_CAM_BOARD("===board-omap3beagle-camera.c::beagle_cam_probe() got called\n");
-
 	cam_1v8_reg = regulator_get(&pdev->dev, "cam_1v8");
 	if (IS_ERR(cam_1v8_reg)) {
 		dev_err(&pdev->dev, "cam_1v8 regulator missing\n");
@@ -588,24 +567,40 @@ static int beagle_cam_probe(struct platform_device *pdev)
 	gpio_direction_output(LEOPARD_RESET_GPIO, 0);
 
 	/* MUX init */
-	omap_ctrl_writew(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0, 0x10C); /* CAM_HS */
-	omap_ctrl_writew(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0, 0x10E); /* CAM_VS */
-	omap_ctrl_writew(OMAP_PIN_OUTPUT | OMAP_MUX_MODE0, 0x110); /* CAM_XCLKA */
-	omap_ctrl_writew(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0, 0x112); /* CAM_PCLK */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x116); /* CAM_D0 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x118); /* CAM_D1 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x11A); /* CAM_D2 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x11C); /* CAM_D3 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x11E); /* CAM_D4 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x120); /* CAM_D5 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x122); /* CAM_D6 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x124); /* CAM_D7 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x126); /* CAM_D8 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x128); /* CAM_D9 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x12A); /* CAM_D10 */
-	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0, 0x12C); /* CAM_D11 */
+	omap_ctrl_writew(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
+			 0x10C); /* CAM_HS */
+	omap_ctrl_writew(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
+			 0x10E); /* CAM_VS */
+	omap_ctrl_writew(OMAP_PIN_OUTPUT | OMAP_MUX_MODE0,
+			 0x110); /* CAM_XCLKA */
+	omap_ctrl_writew(OMAP_PIN_INPUT_PULLUP | OMAP_MUX_MODE0,
+			 0x112); /* CAM_PCLK */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x116); /* CAM_D0 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x118); /* CAM_D1 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x11A); /* CAM_D2 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x11C); /* CAM_D3 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x11E); /* CAM_D4 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x120); /* CAM_D5 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x122); /* CAM_D6 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x124); /* CAM_D7 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x126); /* CAM_D8 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x128); /* CAM_D9 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x12A); /* CAM_D10 */
+	omap_ctrl_writew(OMAP_PIN_INPUT | OMAP_MUX_MODE0,
+			 0x12C); /* CAM_D11 */
 
-	DPRINTK_CAM_BOARD("===board-omap3beagle-camera.c: beagle_cam_probe() complete\n");
+	printk(KERN_INFO "omap3beaglelmb: Driver registration complete\n");
 
 	return 0;
 }
@@ -621,7 +616,6 @@ static int beagle_cam_remove(struct platform_device *pdev)
 	regulator_put(cam_2v8_reg);
 
 	gpio_free(LEOPARD_RESET_GPIO);
-	DPRINTK_CAM_BOARD("===board-omap3beagle-camera.c: Driver remove complete\n");
 
 	return 0;
 }
@@ -658,13 +652,9 @@ static struct platform_driver beagle_cam_driver = {
  */
 int __init omap3beaglelmb_init(void)
 {
-	DPRINTK_CAM_BOARD("board-omap3beagle-camera.c::omap3beaglelmb_init() got called\n");
-
 	/* NOTE: Beagle xM boards are the only ones with camera interface */
-	if (cpu_is_omap3630()) {
-		DPRINTK_CAM_BOARD("board-omap3beagle-camera.c::omap3beaglelmb_init()-->cpu_is_omap3630()\n");
+	if (cpu_is_omap3630())
 		platform_driver_register(&beagle_cam_driver);
-	}
 
 	return 0;
 }
