@@ -466,7 +466,6 @@ static int mt9p031_power_set(struct v4l2_int_device *s, enum v4l2_power power)
 	struct omap34xxcam_videodev *vdev = s->u.slave->master->priv;
 	switch (power) {
 	case V4L2_POWER_OFF:
-		break;
 	case V4L2_POWER_STANDBY:
 		isp_set_xclk(vdev->cam->isp, 0, CAM_USE_XCLKA);
 
