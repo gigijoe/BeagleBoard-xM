@@ -526,6 +526,10 @@ static int mt9p031_init_camera(const struct i2c_client *client)
 	struct mt9p031_priv *priv = i2c_get_clientdata(client);
 	struct v4l2_pix_format *pix = &priv->pix;
 
+        ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0001);    //High
+        ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0000);    //Low
+        mdelay(100);
+
 	ret = mt9p031_reg_write(client, REG_MT9P031_PLL_CTRL, 0x0051);  	//PLL_CTRL; power up pll
 	ret |= mt9p031_reg_write(client, REG_MT9P031_PLL_CONF1, 0x1801);		//PLL_CONFIG_1: m=24, n=1
 	ret |= mt9p031_reg_write(client, REG_MT9P031_PLL_CONF2, 0x0002);		//PLL_CONFIG_2: p1=2, p2=0
@@ -534,10 +538,6 @@ static int mt9p031_init_camera(const struct i2c_client *client)
 	mdelay(200);
 
 	ret |= mt9p031_set_params(priv->client, pix->width, pix->height);
-	
-	ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0001);	//High
-	ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0000);	//Low
-	mdelay(100);
 	
 	ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_1_GAIN, 0x0051);  	//Green1_gain_reg
 	ret |= mt9p031_reg_write(client, REG_MT9P031_BLUE_GAIN, 0x0051);  	//Blue_gain_reg
