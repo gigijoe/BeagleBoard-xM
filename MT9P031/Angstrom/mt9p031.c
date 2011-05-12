@@ -526,7 +526,7 @@ static int mt9p031_init_camera(const struct i2c_client *client)
 	struct mt9p031_priv *priv = i2c_get_clientdata(client);
 	struct v4l2_pix_format *pix = &priv->pix;
 
-        ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0001);    //High
+        ret = mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0001);    //High
         ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0000);    //Low
         mdelay(100);
 
