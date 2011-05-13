@@ -50,7 +50,7 @@
 			macro
 ************************************************************************/
 // Macro to configure I2c level shifter. Use only for MT9P031 Headboards from Aptina; not required for Leopard Imaging or elsewise. 
-#define MT9P031_HEADBOARD
+//#define MT9P031_HEADBOARD
 
 #define MT9P031_CHIP_ID			0x1801
 #define MT9P031_MAX_HEIGHT		1944
@@ -526,9 +526,9 @@ static int mt9p031_init_camera(const struct i2c_client *client)
 	struct mt9p031_priv *priv = i2c_get_clientdata(client);
 	struct v4l2_pix_format *pix = &priv->pix;
 
-        ret = mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0001);    //High
-        ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0000);    //Low
-        mdelay(100);
+  ret = mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0001);    //High
+  ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0000);    //Low
+  mdelay(100);
 
 	ret = mt9p031_reg_write(client, REG_MT9P031_PLL_CTRL, 0x0051);  	//PLL_CTRL; power up pll
 	ret |= mt9p031_reg_write(client, REG_MT9P031_PLL_CONF1, 0x1801);		//PLL_CONFIG_1: m=24, n=1
@@ -538,12 +538,19 @@ static int mt9p031_init_camera(const struct i2c_client *client)
 	mdelay(200);
 
 	ret |= mt9p031_set_params(priv->client, pix->width, pix->height);
-	
+#if 0	
 	ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_1_GAIN, 0x0051);  	//Green1_gain_reg
 	ret |= mt9p031_reg_write(client, REG_MT9P031_BLUE_GAIN, 0x0051);  	//Blue_gain_reg
 	ret |= mt9p031_reg_write(client, REG_MT9P031_RED_GAIN, 0x0051);  	//Red_gain_reg
 	ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_2_GAIN, 0x0051);  	//Green2_gain_reg
 	ret |= mt9p031_reg_write(client, REG_MT9P031_GLOBAL_GAIN, 0x0008);		//Analog Gain
+#endif
+  ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_1_GAIN, 0x0079);   //Green1_gain_reg
+  ret |= mt9p031_reg_write(client, REG_MT9P031_BLUE_GAIN, 0x0079);    //Blue_gain_reg
+  ret |= mt9p031_reg_write(client, REG_MT9P031_RED_GAIN, 0x0079);   //Red_gain_reg
+  ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_2_GAIN, 0x0079);   //Green2_gain_reg
+  ret |= mt9p031_reg_write(client, REG_MT9P031_GLOBAL_GAIN, 0x0026);    //Analog Gain
+  
 	ret |= mt9p031_reg_write(client, REG_MT9P031_READ_MODE1, 0x0006);  	//Read_mode_1 //disable AB
 	ret |= mt9p031_reg_write(client, REG_MT9P031_OUT_CTRL, 0x1F8E);		//Enable parll fifo data
 	
@@ -679,7 +686,7 @@ int mt9p031_set_gain(u16 lineargain, struct i2c_client *client,
 	}
 
 	reg_gain = MT9P031_EV_GAIN_TBL[lineargain];
-	ret = mt9p031_reg_write(client, REG_MT9P031_GLOBAL_GAIN,
+  ret = mt9p031_reg_write(client, REG_MT9P031_GLOBAL_GAIN,
 					reg_gain);
 	
 	if (ret) {
