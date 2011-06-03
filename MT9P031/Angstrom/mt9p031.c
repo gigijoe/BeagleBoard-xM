@@ -539,9 +539,9 @@ static int mt9p031_init_camera(const struct i2c_client *client)
 	struct mt9p031_priv *priv = i2c_get_clientdata(client);
 	struct v4l2_pix_format *pix = &priv->pix;
 
-  ret = mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0001);    //High
-  ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0000);    //Low
-  mdelay(100);
+	ret = mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0001);    //High
+	ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0000);    //Low
+	mdelay(100);
 
 	ret = mt9p031_reg_write(client, REG_MT9P031_PLL_CTRL, MT9P031_PLL_CONTROL_PWRON);  	//PLL_CTRL; power up pll
 	ret |= mt9p031_reg_write(client, REG_MT9P031_PLL_CONF1, MT9P031_PLL_CONFIG_1_M_96MHZ | MT9P031_PLL_CONFIG_1_N_96MHZ);		//PLL_CONFIG_1: m=24, n=1
@@ -558,11 +558,11 @@ static int mt9p031_init_camera(const struct i2c_client *client)
 	ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_2_GAIN, 0x0051);  	//Green2_gain_reg
 	ret |= mt9p031_reg_write(client, REG_MT9P031_GLOBAL_GAIN, 0x0008);		//Analog Gain
 #endif
-  ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_1_GAIN, 0x0079);   //Green1_gain_reg
-  ret |= mt9p031_reg_write(client, REG_MT9P031_BLUE_GAIN, 0x0079);    //Blue_gain_reg
-  ret |= mt9p031_reg_write(client, REG_MT9P031_RED_GAIN, 0x0079);   //Red_gain_reg
-  ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_2_GAIN, 0x0079);   //Green2_gain_reg
-  ret |= mt9p031_reg_write(client, REG_MT9P031_GLOBAL_GAIN, 0x0026);    //Analog Gain
+	ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_1_GAIN, 0x0039);   //Green1_gain_reg
+	ret |= mt9p031_reg_write(client, REG_MT9P031_BLUE_GAIN, 0x0039);    //Blue_gain_reg
+	ret |= mt9p031_reg_write(client, REG_MT9P031_RED_GAIN, 0x0039);   //Red_gain_reg
+	ret |= mt9p031_reg_write(client, REG_MT9P031_GREEN_2_GAIN, 0x0039);   //Green2_gain_reg
+	ret |= mt9p031_reg_write(client, REG_MT9P031_GLOBAL_GAIN, 0x0026);    //Analog Gain
   
 	ret |= mt9p031_reg_write(client, REG_MT9P031_READ_MODE1, 0x0006);  	//Read_mode_1 //disable AB
 	ret |= mt9p031_reg_write(client, REG_MT9P031_OUT_CTRL, 0x1F8E);		//Enable parll fifo data
