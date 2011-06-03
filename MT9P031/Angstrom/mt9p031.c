@@ -520,12 +520,9 @@ static int mt9p031_set_params(struct i2c_client *client, u32 width, u32 height)
 #define              MT9P031_PLL_CONTROL_PWRON       0x0051
 #define              MT9P031_PLL_CONTROL_USEPLL      0x0052
 #define      MT9P031_PLL_CONFIG_1                    0x11
-#define              MT9P031_PLL_CONFIG_1_M_48MHZ    0x5000
-#define              MT9P031_PLL_CONFIG_1_N_48MHZ    0x05
 #define              MT9P031_PLL_CONFIG_1_M_96MHZ    0x3600
 #define              MT9P031_PLL_CONFIG_1_N_96MHZ    0x05
 #define      MT9P031_PLL_CONFIG_2                    0x12
-#define              MT9P031_PLL_CONFIG_2_P1_48MHZ   5
 #define              MT9P031_PLL_CONFIG_2_P1_96MHZ   2
 
 /**
@@ -542,7 +539,15 @@ static int mt9p031_init_camera(const struct i2c_client *client)
 	ret = mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0001);    //High
 	ret |= mt9p031_reg_write(client, REG_MT9P031_RESET, 0x0000);    //Low
 	mdelay(100);
-
+#if 0
+	ret = mt9p031_reg_write(client, REG_MT9P031_PLL_CTRL, 0x0051);   //PLL_CTRL; power up pll
+	ret |= mt9p031_reg_write(client, REG_MT9P031_PLL_CONF1, 0x1801);    //PLL_CONFIG_1: m=24, n=1
+	ret |= mt9p031_reg_write(client, REG_MT9P031_PLL_CONF2, 0x0002);    //PLL_CONFIG_2: p1=2, p2=0
+	mdelay(10);                     //wait 10 ms for VCO to lock
+	ret |= mt9p031_reg_write(client, REG_MT9P031_PLL_CTRL, 0x0053);   //PLL_CONTROL; use PLL
+	mdelay(200);
+#endif
+	/*	mt9p031 Maxinum PIXCLK is 96MHz	*/
 	ret = mt9p031_reg_write(client, REG_MT9P031_PLL_CTRL, MT9P031_PLL_CONTROL_PWRON);  	//PLL_CTRL; power up pll
 	ret |= mt9p031_reg_write(client, REG_MT9P031_PLL_CONF1, MT9P031_PLL_CONFIG_1_M_96MHZ | MT9P031_PLL_CONFIG_1_N_96MHZ);		//PLL_CONFIG_1: m=24, n=1
 	ret |= mt9p031_reg_write(client, REG_MT9P031_PLL_CONF2, MT9P031_PLL_CONFIG_2_P1_96MHZ);		//PLL_CONFIG_2: p1=2, p2=0
